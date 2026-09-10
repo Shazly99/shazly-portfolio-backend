@@ -75,3 +75,22 @@ export function mapUser(row) {
     name: row.name,
   };
 }
+
+export function mapExperience(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    company: row.company,
+    role: row.role,
+    period: row.period,
+    location: row.location,
+    progression: parseJson(row.progression, []),
+    highlights: parseJson(row.highlights, []),
+    projects: parseJson(row.projects, []),
+    isCurrent: Boolean(row.is_current),
+    published: Boolean(row.published),
+    sortOrder: row.sort_order,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}

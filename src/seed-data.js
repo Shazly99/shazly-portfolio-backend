@@ -300,3 +300,64 @@ export const projects = [
     focus: ["Clear presentation of specialist content", "Reusable corporate and service components", "Responsive motion and multilingual layouts"],
   },
 ];
+
+export const experiences = [
+  {
+    company: "Viganium",
+    role: "Senior Front-End Developer",
+    progression: ["React Developer", "Senior Front-End Developer"],
+    period: "2024 - Present",
+    location: "Remote",
+    isCurrent: true,
+    projects: [
+      { name: "Alghazal", url: "https://alghazal.sa/" },
+      { name: "Alghazal Hajj Portal", url: "https://hajj.alghazal.info/" },
+      { name: "Al Maqam Rent A Car", url: "https://almaqamrc.com.sa/" },
+      { name: "Clean Technique", url: "http://ct.com.sa/" },
+      { name: "Betterway Egypt", url: "https://betterway-egypt.com/" },
+      { name: "Betterway Admin", url: "https://admin.betterway-egypt.com/" },
+      { name: "Vigtas Website", url: "https://vigtas.com/" },
+      { name: "Darna Group", url: "https://darnagroup.com/" },
+      { name: "Viganium CRM", url: "https://mixcrm.net/" },
+      { name: "Viganium", url: "https://viganium.com/" },
+      { name: "Otg-World", url: "https://otg-world.com/" },
+    ],
+    highlights: [
+      "Developed and maintained scalable frontend applications using React.js and Next.js",
+      "Implemented advanced Next.js features including SSR, API routes, and static site generation",
+      "Optimized application performance through code splitting and lazy loading",
+    ],
+  },
+  {
+    company: "Right Click",
+    role: "React Developer",
+    progression: [],
+    period: "2023 - 2024",
+    location: "Remote, KSA",
+    isCurrent: false,
+    projects: [
+      { name: "Arab Urban Development Institute", url: "https://araburban.org/ar" },
+      { name: "RightClick Website", url: "https://rightclick.sa/" },
+      { name: "Nagro", url: "https://nagro.com.sa/" },
+      { name: "GC Food Factory", url: "https://gcfoodfactory.com" },
+      { name: "Moon-Light", url: "https://moonlight.sa" },
+    ],
+    highlights: [
+      "Developed dynamic user interfaces using React technology",
+      "Designed and implemented reusable React components",
+    ],
+  },
+  {
+    company: "Zari.Solutions",
+    role: "Frontend Developer",
+    progression: [],
+    period: "2022",
+    location: "Cairo, Egypt",
+    isCurrent: false,
+    projects: [{ name: "Bytrh Dashboard", url: "https://admin.bytrh.com" }],
+    highlights: [
+      "Developed React-based dashboard for admin tasks and medical center management",
+      "Created responsive designs for all screens and devices",
+    ],
+  },
+];

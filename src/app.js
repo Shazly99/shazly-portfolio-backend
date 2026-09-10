@@ -4,6 +4,7 @@ import { requireAuth } from "./auth.js";
 import { config, isOriginAllowed } from "./config.js";
 import adminRouter from "./routes/admin.js";
 import authRouter from "./routes/auth.js";
+import experiencesRouter from "./routes/experiences.js";
 import mediaRouter from "./routes/media.js";
 import messagesRouter from "./routes/messages.js";
 import profileRouter from "./routes/profile.js";
@@ -41,6 +42,7 @@ app.get("/api", (_req, res) => {
       "GET /api/skills",
       "GET /api/projects",
       "GET /api/projects/:slug",
+      "GET /api/experiences",
       "POST /api/messages",
       "GET /api/uploads/:id",
     ],
@@ -56,6 +58,11 @@ app.get("/api", (_req, res) => {
       "PUT /api/admin/projects/reorder",
       "PUT /api/admin/projects/:id",
       "DELETE /api/admin/projects/:id",
+      "GET /api/admin/experiences",
+      "POST /api/admin/experiences",
+      "PUT /api/admin/experiences/reorder",
+      "PUT /api/admin/experiences/:id",
+      "DELETE /api/admin/experiences/:id",
       "POST /api/admin/uploads",
       "GET /api/admin/skills",
       "PUT /api/admin/skills",
@@ -72,6 +79,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/profile", profileRouter);
 app.use("/api/skills", skillsRouter);
 app.use("/api/projects", projectsRouter);
+app.use("/api/experiences", experiencesRouter);
 app.use("/api/messages", messagesRouter);
 app.use("/api/uploads", mediaRouter);
 app.use("/api/admin/uploads", requireAuth, uploadsRouter);

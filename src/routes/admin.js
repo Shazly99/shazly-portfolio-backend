@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db.js";
-import { mapMessage, mapProfile, mapProject, mapSkill, mapUser } from "../mappers.js";
+import { mapMessage, mapProfile, mapProject, mapSkill, mapUser, mapExperience } from "../mappers.js";
 import { parseJson, slugify, text, toJson } from "../utils.js";
 
 const router = Router();
@@ -45,11 +45,13 @@ router.get("/me", (req, res) => {
 router.get("/stats", (_req, res) => {
   const messages = db.prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) AS unread FROM messages").get();
   const projects = db.prepare("SELECT COUNT(*) AS total FROM projects").get();
+  const experiences = db.prepare("SELECT COUNT(*) AS total FROM experiences").get();
   res.json({
     ok: true,
     stats: {
       messages: { total: messages.total, unread: messages.unread || 0 },
       projects: { total: projects.total },
+      experiences: { total: experiences.total },
     },
   });
 });
@@ -209,6 +211,143 @@ router.delete("/projects/:id", (req, res) => {
   const result = db.prepare("DELETE FROM projects WHERE id = ?").run(req.params.id);
   if (!result.changes) {
     return res.status(404).json({ ok: false, error: "Project not found." });
+  }
+  res.json({ ok: true });
+});
+
+function readExperienceInput(body, existing = {}) {
+  const projectsInput = Array.isArray(body?.projects)
+    ? body.projects
+    : parseJson(body?.projects, existing.projects ? parseJson(existing.projects, []) : []);
+
+  const normalizedProjects = (projectsInput || [])
+    .map((item) => {
+      if (typeof item === "string") {
+        const [name, url] = item.split("|").map((part) => part.trim());
+        return { name: name || "", url: url || "" };
+      }
+      return {
+        name: text(item?.name),
+        url: text(item?.url),
+      };
+    })
+    .filter((item) => item.name);
+
+  return {
+    company: text(body?.company) || existing.company || "",
+    role: text(body?.role) || existing.role || "",
+    period: text(body?.period) || existing.period || "",
+    location: text(body?.location) || existing.location || "",
+    progression: toJson(parseJson(body?.progression, existing.progression ? parseJson(existing.progression, []) : [])),
+    highlights: toJson(parseJson(body?.highlights, existing.highlights ? parseJson(existing.highlights, []) : [])),
+    projects: toJson(normalizedProjects),
+    isCurrent: Number(body?.isCurrent ?? body?.is_current ?? existing.is_current ?? 0) ? 1 : 0,
+    published: Number(body?.published ?? existing.published ?? 1) ? 1 : 0,
+    sortOrder: Number(body?.sortOrder ?? body?.sort_order ?? existing.sort_order ?? 0),
+  };
+}
+
+router.get("/experiences", (_req, res) => {
+  const rows = db.prepare("SELECT * FROM experiences ORDER BY sort_order ASC, id ASC").all();
+  res.json({ ok: true, count: rows.length, experiences: rows.map(mapExperience) });
+});
+
+router.put("/experiences/reorder", (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isFinite) : [];
+  if (!ids.length) {
+    return res.status(400).json({ ok: false, error: "ids array is required." });
+  }
+
+  const update = db.prepare("UPDATE experiences SET sort_order = ?, updated_at = ? WHERE id = ?");
+  const stamp = now();
+  db.exec("BEGIN");
+  try {
+    ids.forEach((id, index) => update.run(index, stamp, id));
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+
+  const rows = db.prepare("SELECT * FROM experiences ORDER BY sort_order ASC, id ASC").all();
+  res.json({ ok: true, experiences: rows.map(mapExperience) });
+});
+
+router.post("/experiences", (req, res) => {
+  const input = readExperienceInput(req.body);
+  if (input.company.length < 2 || input.role.length < 2 || input.period.length < 2) {
+    return res.status(400).json({ ok: false, error: "Company, role, and period are required." });
+  }
+
+  const maxSort = db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM experiences").get().m;
+  const sortOrder =
+    req.body?.sortOrder === undefined && req.body?.sort_order === undefined
+      ? maxSort + 1
+      : input.sortOrder;
+
+  const result = db.prepare(`
+    INSERT INTO experiences (
+      company, role, period, location, progression, highlights, projects,
+      is_current, published, sort_order, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    input.company,
+    input.role,
+    input.period,
+    input.location,
+    input.progression,
+    input.highlights,
+    input.projects,
+    input.isCurrent,
+    input.published,
+    sortOrder,
+    now(),
+    now(),
+  );
+
+  const experience = db.prepare("SELECT * FROM experiences WHERE id = ?").get(result.lastInsertRowid);
+  res.status(201).json({ ok: true, experience: mapExperience(experience) });
+});
+
+router.put("/experiences/:id", (req, res) => {
+  const existing = db.prepare("SELECT * FROM experiences WHERE id = ?").get(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ ok: false, error: "Experience not found." });
+  }
+
+  const input = readExperienceInput(req.body, existing);
+  if (input.company.length < 2 || input.role.length < 2 || input.period.length < 2) {
+    return res.status(400).json({ ok: false, error: "Company, role, and period are required." });
+  }
+
+  db.prepare(`
+    UPDATE experiences SET
+      company = ?, role = ?, period = ?, location = ?, progression = ?, highlights = ?,
+      projects = ?, is_current = ?, published = ?, sort_order = ?, updated_at = ?
+    WHERE id = ?
+  `).run(
+    input.company,
+    input.role,
+    input.period,
+    input.location,
+    input.progression,
+    input.highlights,
+    input.projects,
+    input.isCurrent,
+    input.published,
+    input.sortOrder,
+    now(),
+    existing.id,
+  );
+
+  const experience = db.prepare("SELECT * FROM experiences WHERE id = ?").get(existing.id);
+  res.json({ ok: true, experience: mapExperience(experience) });
+});
+
+router.delete("/experiences/:id", (req, res) => {
+  const result = db.prepare("DELETE FROM experiences WHERE id = ?").run(req.params.id);
+  if (!result.changes) {
+    return res.status(404).json({ ok: false, error: "Experience not found." });
   }
   res.json({ ok: true });
 });

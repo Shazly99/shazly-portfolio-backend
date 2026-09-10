@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { hashPassword } from "./auth.js";
 import { config } from "./config.js";
-import { projects, profile, skillGroups } from "./seed-data.js";
+import { projects, profile, skillGroups, experiences } from "./seed-data.js";
 import { toJson } from "./utils.js";
 
 const dataDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../data");
@@ -90,6 +90,22 @@ db.exec(`
     data BLOB NOT NULL,
     created_at TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS experiences (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company TEXT NOT NULL,
+    role TEXT NOT NULL,
+    period TEXT NOT NULL,
+    location TEXT,
+    progression TEXT NOT NULL,
+    highlights TEXT NOT NULL,
+    projects TEXT NOT NULL,
+    is_current INTEGER NOT NULL DEFAULT 0,
+    published INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
 `);
 
 function now() {
@@ -162,6 +178,31 @@ function seedIfEmpty() {
         project.solution,
         toJson(project.features),
         toJson(project.focus),
+        index,
+        now(),
+        now(),
+      );
+    });
+  }
+
+  const experienceCount = db.prepare("SELECT COUNT(*) AS count FROM experiences").get().count;
+  if (experienceCount === 0) {
+    const insertExperience = db.prepare(`
+      INSERT INTO experiences (
+        company, role, period, location, progression, highlights, projects,
+        is_current, published, sort_order, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+    `);
+    experiences.forEach((experience, index) => {
+      insertExperience.run(
+        experience.company,
+        experience.role,
+        experience.period,
+        experience.location,
+        toJson(experience.progression || []),
+        toJson(experience.highlights || []),
+        toJson(experience.projects || []),
+        experience.isCurrent ? 1 : 0,
         index,
         now(),
         now(),
