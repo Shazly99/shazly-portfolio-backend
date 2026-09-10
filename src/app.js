@@ -39,6 +39,7 @@ app.get("/api", (_req, res) => {
       "DELETE /api/admin/messages/:id",
       "GET /api/admin/projects",
       "POST /api/admin/projects",
+      "PUT /api/admin/projects/reorder",
       "PUT /api/admin/projects/:id",
       "DELETE /api/admin/projects/:id",
       "POST /api/admin/uploads",

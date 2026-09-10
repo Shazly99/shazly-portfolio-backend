@@ -84,11 +84,41 @@ router.get("/projects", (_req, res) => {
   res.json({ ok: true, count: rows.length, projects: rows.map(mapProject) });
 });
 
+router.put("/projects/reorder", (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isFinite) : [];
+  if (!ids.length) {
+    return res.status(400).json({ ok: false, error: "ids array is required." });
+  }
+
+  const update = db.prepare("UPDATE projects SET sort_order = ?, updated_at = ? WHERE id = ?");
+  const stamp = now();
+
+  db.exec("BEGIN");
+  try {
+    ids.forEach((id, index) => {
+      update.run(index, stamp, id);
+    });
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+
+  const rows = db.prepare("SELECT * FROM projects ORDER BY sort_order ASC, id ASC").all();
+  res.json({ ok: true, count: rows.length, projects: rows.map(mapProject) });
+});
+
 router.post("/projects", (req, res) => {
   const input = readProjectInput(req.body);
   if (!input.slug || input.title.length < 2 || input.description.length < 10) {
     return res.status(400).json({ ok: false, error: "Title, slug, and description are required." });
   }
+
+  const maxSort = db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM projects").get().m;
+  const sortOrder =
+    req.body?.sortOrder === undefined && req.body?.sort_order === undefined
+      ? maxSort + 1
+      : input.sortOrder;
 
   try {
     const result = db.prepare(`
@@ -113,7 +143,7 @@ router.post("/projects", (req, res) => {
       input.features,
       input.focus,
       input.published,
-      input.sortOrder,
+      sortOrder,
       now(),
       now(),
     );
