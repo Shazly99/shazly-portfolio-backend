@@ -4,10 +4,12 @@ import { requireAuth } from "./auth.js";
 import { config } from "./config.js";
 import adminRouter from "./routes/admin.js";
 import authRouter from "./routes/auth.js";
+import mediaRouter from "./routes/media.js";
 import messagesRouter from "./routes/messages.js";
 import profileRouter from "./routes/profile.js";
 import projectsRouter from "./routes/projects.js";
 import skillsRouter from "./routes/skills.js";
+import uploadsRouter from "./routes/uploads.js";
 
 const app = express();
 
@@ -26,6 +28,7 @@ app.get("/api", (_req, res) => {
       "GET /api/projects",
       "GET /api/projects/:slug",
       "POST /api/messages",
+      "GET /api/uploads/:id",
     ],
     admin: [
       "POST /api/auth/login",
@@ -38,6 +41,7 @@ app.get("/api", (_req, res) => {
       "POST /api/admin/projects",
       "PUT /api/admin/projects/:id",
       "DELETE /api/admin/projects/:id",
+      "POST /api/admin/uploads",
       "GET /api/admin/skills",
       "PUT /api/admin/skills",
       "PUT /api/admin/profile",
@@ -54,6 +58,8 @@ app.use("/api/profile", profileRouter);
 app.use("/api/skills", skillsRouter);
 app.use("/api/projects", projectsRouter);
 app.use("/api/messages", messagesRouter);
+app.use("/api/uploads", mediaRouter);
+app.use("/api/admin/uploads", requireAuth, uploadsRouter);
 app.use("/api/admin", requireAuth, adminRouter);
 
 app.use((_req, res) => {
@@ -62,6 +68,12 @@ app.use((_req, res) => {
 
 app.use((error, _req, res, _next) => {
   console.error(error);
+  if (error?.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({ ok: false, error: "Image must be 5MB or smaller." });
+  }
+  if (String(error?.message || "").includes("Only image")) {
+    return res.status(400).json({ ok: false, error: error.message });
+  }
   res.status(500).json({ ok: false, error: "Something went wrong." });
 });
 

@@ -23,3 +23,8 @@ API: `http://localhost:4000/api`
   - `ADMIN_PASSWORD`
   - `CLIENT_ORIGINS` (comma-separated frontend/admin URLs)
   - `NODE_VERSION=22`
+
+## Image uploads
+
+Admin can upload project images via `POST /api/admin/uploads`.
+Images are stored as BLOBs in SQLite and served from `GET /api/uploads/:id`.
