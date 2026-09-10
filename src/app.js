@@ -65,7 +65,13 @@ app.get("/api", (_req, res) => {
       "DELETE /api/admin/experiences/:id",
       "POST /api/admin/uploads",
       "GET /api/admin/skills",
+      "POST /api/admin/skills",
+      "PUT /api/admin/skills/reorder",
+      "PUT /api/admin/skills/:id",
+      "DELETE /api/admin/skills/:id",
       "PUT /api/admin/skills",
+      "GET /api/admin/skills-page",
+      "PUT /api/admin/skills-page",
       "PUT /api/admin/profile",
     ],
   });

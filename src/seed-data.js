@@ -42,6 +42,31 @@ export const skillGroups = [
   },
 ];
 
+export const skillsPage = {
+  kicker: "Skillset & Tooling",
+  title: "A practical toolkit shaped by",
+  titleHighlight: "enterprise delivery.",
+  intro:
+    "From planning ERP modules to polishing storefront UX, these are the skills and workflows I rely on every week.",
+  stats: [
+    {
+      label: "Experience",
+      value: "3+ years",
+      description: "Delivering ERP, CRM and commerce front-ends end to end.",
+    },
+    {
+      label: "Enterprise modules",
+      value: "6 launches",
+      description: "Dashboards, approvals, inventory & customer lifecycle flows.",
+    },
+    {
+      label: "Primary stack",
+      value: "React · Next.js · TypeScript",
+      description: "The toolkit I use daily across client products.",
+    },
+  ],
+};
+
 export const projects = [
   {
     slug: "al-maqam-rent-a-car",

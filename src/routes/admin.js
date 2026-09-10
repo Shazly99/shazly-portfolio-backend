@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../db.js";
-import { mapMessage, mapProfile, mapProject, mapSkill, mapUser, mapExperience } from "../mappers.js";
+import { mapMessage, mapProfile, mapProject, mapSkill, mapSkillsPage, mapUser, mapExperience } from "../mappers.js";
 import { parseJson, slugify, text, toJson } from "../utils.js";
 
 const router = Router();
@@ -46,12 +46,14 @@ router.get("/stats", (_req, res) => {
   const messages = db.prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) AS unread FROM messages").get();
   const projects = db.prepare("SELECT COUNT(*) AS total FROM projects").get();
   const experiences = db.prepare("SELECT COUNT(*) AS total FROM experiences").get();
+  const skills = db.prepare("SELECT COUNT(*) AS total FROM skill_groups").get();
   res.json({
     ok: true,
     stats: {
       messages: { total: messages.total, unread: messages.unread || 0 },
       projects: { total: projects.total },
       experiences: { total: experiences.total },
+      skills: { total: skills.total },
     },
   });
 });
@@ -352,9 +354,152 @@ router.delete("/experiences/:id", (req, res) => {
   res.json({ ok: true });
 });
 
+function readSkillInput(body, existing = {}) {
+  const skillsRaw = body?.skills;
+  let skills = [];
+  if (Array.isArray(skillsRaw)) {
+    skills = skillsRaw.map((item) => text(item)).filter(Boolean);
+  } else if (typeof skillsRaw === "string") {
+    skills = skillsRaw
+      .split("\n")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  } else if (existing.skills) {
+    skills = parseJson(existing.skills, []);
+  }
+
+  return {
+    title: text(body?.title) || existing.title || "",
+    icon: text(body?.icon) || existing.icon || "code-2",
+    highlight: text(body?.highlight) || existing.highlight || "",
+    summary: text(body?.summary) || existing.summary || "",
+    skills: toJson(skills),
+    sortOrder: Number(body?.sortOrder ?? body?.sort_order ?? existing.sort_order ?? 0),
+  };
+}
+
+router.get("/skills-page", (_req, res) => {
+  const page = db.prepare("SELECT * FROM skills_page WHERE id = 1").get();
+  res.json({ ok: true, page: mapSkillsPage(page) });
+});
+
+router.put("/skills-page", (req, res) => {
+  const current = db.prepare("SELECT * FROM skills_page WHERE id = 1").get();
+  if (!current) {
+    return res.status(404).json({ ok: false, error: "Skills page content not found." });
+  }
+
+  const statsInput = Array.isArray(req.body?.stats)
+    ? req.body.stats
+    : parseJson(req.body?.stats, parseJson(current.stats, []));
+
+  const stats = (statsInput || [])
+    .map((item) => ({
+      label: text(item?.label),
+      value: text(item?.value),
+      description: text(item?.description),
+    }))
+    .filter((item) => item.label && item.value);
+
+  const next = {
+    kicker: text(req.body?.kicker) || current.kicker,
+    title: text(req.body?.title) || current.title,
+    titleHighlight: text(req.body?.titleHighlight ?? req.body?.title_highlight) || current.title_highlight,
+    intro: text(req.body?.intro) || current.intro,
+    stats: toJson(stats),
+  };
+
+  db.prepare(`
+    UPDATE skills_page SET
+      kicker = ?, title = ?, title_highlight = ?, intro = ?, stats = ?, updated_at = ?
+    WHERE id = 1
+  `).run(next.kicker, next.title, next.titleHighlight, next.intro, next.stats, now());
+
+  const page = db.prepare("SELECT * FROM skills_page WHERE id = 1").get();
+  res.json({ ok: true, page: mapSkillsPage(page) });
+});
+
 router.get("/skills", (_req, res) => {
   const groups = db.prepare("SELECT * FROM skill_groups ORDER BY sort_order ASC, id ASC").all();
+  res.json({ ok: true, count: groups.length, skillGroups: groups.map(mapSkill) });
+});
+
+router.put("/skills/reorder", (req, res) => {
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number).filter(Number.isFinite) : [];
+  if (!ids.length) {
+    return res.status(400).json({ ok: false, error: "ids array is required." });
+  }
+
+  const update = db.prepare("UPDATE skill_groups SET sort_order = ? WHERE id = ?");
+  db.exec("BEGIN");
+  try {
+    ids.forEach((id, index) => update.run(index, id));
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+
+  const groups = db.prepare("SELECT * FROM skill_groups ORDER BY sort_order ASC, id ASC").all();
   res.json({ ok: true, skillGroups: groups.map(mapSkill) });
+});
+
+router.post("/skills", (req, res) => {
+  const input = readSkillInput(req.body);
+  if (input.title.length < 2) {
+    return res.status(400).json({ ok: false, error: "Title is required." });
+  }
+
+  const maxSort = db.prepare("SELECT COALESCE(MAX(sort_order), -1) AS m FROM skill_groups").get().m;
+  const sortOrder =
+    req.body?.sortOrder === undefined && req.body?.sort_order === undefined
+      ? maxSort + 1
+      : input.sortOrder;
+
+  const result = db.prepare(`
+    INSERT INTO skill_groups (title, icon, highlight, summary, skills, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(input.title, input.icon, input.highlight, input.summary, input.skills, sortOrder);
+
+  const skillGroup = db.prepare("SELECT * FROM skill_groups WHERE id = ?").get(result.lastInsertRowid);
+  res.status(201).json({ ok: true, skillGroup: mapSkill(skillGroup) });
+});
+
+router.put("/skills/:id", (req, res) => {
+  const existing = db.prepare("SELECT * FROM skill_groups WHERE id = ?").get(req.params.id);
+  if (!existing) {
+    return res.status(404).json({ ok: false, error: "Skill track not found." });
+  }
+
+  const input = readSkillInput(req.body, existing);
+  if (input.title.length < 2) {
+    return res.status(400).json({ ok: false, error: "Title is required." });
+  }
+
+  db.prepare(`
+    UPDATE skill_groups SET
+      title = ?, icon = ?, highlight = ?, summary = ?, skills = ?, sort_order = ?
+    WHERE id = ?
+  `).run(
+    input.title,
+    input.icon,
+    input.highlight,
+    input.summary,
+    input.skills,
+    input.sortOrder,
+    existing.id,
+  );
+
+  const skillGroup = db.prepare("SELECT * FROM skill_groups WHERE id = ?").get(existing.id);
+  res.json({ ok: true, skillGroup: mapSkill(skillGroup) });
+});
+
+router.delete("/skills/:id", (req, res) => {
+  const result = db.prepare("DELETE FROM skill_groups WHERE id = ?").run(req.params.id);
+  if (!result.changes) {
+    return res.status(404).json({ ok: false, error: "Skill track not found." });
+  }
+  res.json({ ok: true });
 });
 
 router.put("/skills", (req, res) => {

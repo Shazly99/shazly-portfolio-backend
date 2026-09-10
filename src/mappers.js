@@ -29,6 +29,18 @@ export function mapSkill(row) {
   };
 }
 
+export function mapSkillsPage(row) {
+  if (!row) return null;
+  return {
+    kicker: row.kicker,
+    title: row.title,
+    titleHighlight: row.title_highlight,
+    intro: row.intro,
+    stats: parseJson(row.stats, []),
+    updatedAt: row.updated_at,
+  };
+}
+
 export function mapProject(row) {
   if (!row) return null;
   return {

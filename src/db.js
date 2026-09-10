@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { hashPassword } from "./auth.js";
 import { config } from "./config.js";
-import { projects, profile, skillGroups, experiences } from "./seed-data.js";
+import { projects, profile, skillGroups, skillsPage, experiences } from "./seed-data.js";
 import { toJson } from "./utils.js";
 
 const dataDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../data");
@@ -47,6 +47,16 @@ db.exec(`
     summary TEXT,
     skills TEXT NOT NULL,
     sort_order INTEGER NOT NULL DEFAULT 0
+  );
+
+  CREATE TABLE IF NOT EXISTS skills_page (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    kicker TEXT NOT NULL,
+    title TEXT NOT NULL,
+    title_highlight TEXT NOT NULL,
+    intro TEXT NOT NULL,
+    stats TEXT NOT NULL,
+    updated_at TEXT NOT NULL
   );
 
   CREATE TABLE IF NOT EXISTS projects (
@@ -151,6 +161,21 @@ function seedIfEmpty() {
     skillGroups.forEach((group, index) => {
       insertSkill.run(group.title, group.icon, group.highlight, group.summary, toJson(group.skills), index);
     });
+  }
+
+  const skillsPageCount = db.prepare("SELECT COUNT(*) AS count FROM skills_page").get().count;
+  if (skillsPageCount === 0) {
+    db.prepare(`
+      INSERT INTO skills_page (id, kicker, title, title_highlight, intro, stats, updated_at)
+      VALUES (1, ?, ?, ?, ?, ?, ?)
+    `).run(
+      skillsPage.kicker,
+      skillsPage.title,
+      skillsPage.titleHighlight,
+      skillsPage.intro,
+      toJson(skillsPage.stats),
+      now(),
+    );
   }
 
   const projectCount = db.prepare("SELECT COUNT(*) AS count FROM projects").get().count;
