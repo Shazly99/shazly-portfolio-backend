@@ -1,7 +1,7 @@
 import cors from "cors";
 import express from "express";
 import { requireAuth } from "./auth.js";
-import { config } from "./config.js";
+import { config, isOriginAllowed } from "./config.js";
 import adminRouter from "./routes/admin.js";
 import authRouter from "./routes/auth.js";
 import mediaRouter from "./routes/media.js";
@@ -14,7 +14,21 @@ import uploadsRouter from "./routes/uploads.js";
 const app = express();
 
 app.set("trust proxy", 1);
-app.use(cors({ origin: config.origins, credentials: true }));
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  }),
+);
+app.options("*", cors());
 app.use(express.json({ limit: "100kb" }));
 
 app.get("/api", (_req, res) => {
