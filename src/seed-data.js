@@ -69,6 +69,22 @@ export const skillsPage = {
 
 export const projects = [
   {
+    slug: "allujain",
+    title: "Allujain",
+    description: "A bilingual public website for Allujain Real Estate Investment & Development, with Arabic RTL as the default and English LTR support.",
+    overview: "Allujain is a Next.js 16 public site whose content is driven by the Lujeen CMS API. Visitors explore the company story, a filterable project catalog, district map, off-plan investment story, and contact journeys — with admin edits appearing on the site without a full redeploy.",
+    image: "/projects/allujain.png",
+    technologies: ["Next.js", "React", "TypeScript", "Tailwind CSS", "GSAP", "Leaflet"],
+    liveUrl: "https://www.allujain.sa/ar",
+    category: "Real Estate",
+    projectType: "Corporate Website",
+    role: "Front-end Development",
+    challenge: "Ship a premium Arabic-first real-estate experience that stays in sync with a headless CMS, while keeping map discovery, project filters, and lead forms fast across locales.",
+    solution: "A Next.js App Router site with custom AR/EN routing, Cache Components against the public API, GSAP scroll motion, a Leaflet map of developments, shadcn/ui primitives, and browser-side inquiry and brochure lead forms.",
+    features: ["CMS-driven home, about, projects, map, and contact pages", "Arabic RTL default with English LTR routing", "Project catalog filtered by type and district", "Interactive Leaflet map of developments", "Inquiry and brochure-request lead forms", "SEO with sitemap, hreflang, and JSON-LD"],
+    focus: ["Next.js Cache Components and API caching", "RTL-first bilingual layouts", "Map-led project discovery with Leaflet", "Headless CMS integration without redeploys"],
+  },
+  {
     slug: "al-maqam-rent-a-car",
     title: "Al Maqam Rent A Car",
     description: "A modern rental platform for finding vehicles, choosing a branch, and managing reservations online.",
@@ -335,6 +351,7 @@ export const experiences = [
     location: "Remote",
     isCurrent: true,
     projects: [
+      { name: "Allujain", url: "https://www.allujain.sa/ar" },
       { name: "Alghazal", url: "https://alghazal.sa/" },
       { name: "Alghazal Hajj Portal", url: "https://hajj.alghazal.info/" },
       { name: "Al Maqam Rent A Car", url: "https://almaqamrc.com.sa/" },

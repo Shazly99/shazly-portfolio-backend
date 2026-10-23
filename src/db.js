@@ -236,4 +236,51 @@ function seedIfEmpty() {
   }
 }
 
+function ensureSeedProjects() {
+  const existingSlugs = new Set(
+    db.prepare("SELECT slug FROM projects").all().map((row) => row.slug),
+  );
+  const missing = projects.filter((project) => !existingSlugs.has(project.slug));
+  if (!missing.length) return;
+
+  const insertProject = db.prepare(`
+    INSERT INTO projects (
+      slug, title, description, overview, image, technologies, live_url, category,
+      project_type, role, challenge, solution, features, focus, published, sort_order,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?)
+  `);
+
+  db.exec("BEGIN");
+  try {
+    db.prepare("UPDATE projects SET sort_order = sort_order + ?").run(missing.length);
+    missing.forEach((project, index) => {
+      insertProject.run(
+        project.slug,
+        project.title,
+        project.description,
+        project.overview,
+        project.image,
+        toJson(project.technologies),
+        project.liveUrl,
+        project.category,
+        project.projectType,
+        project.role,
+        project.challenge,
+        project.solution,
+        toJson(project.features),
+        toJson(project.focus),
+        index,
+        now(),
+        now(),
+      );
+    });
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+}
+
 seedIfEmpty();
+ensureSeedProjects();
